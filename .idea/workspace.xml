@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e12042fe-c7c7-4af6-bdff-d1a2610c64d7" name="Changes" comment="bctpy_mrtrix neu" />
+    <list default="true" id="e12042fe-c7c7-4af6-bdff-d1a2610c64d7" name="Changes" comment="bct_test funktioniert so" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -76,7 +76,7 @@
       <option name="presentableId" value="Default" />
       <updated>1768994268592</updated>
       <workItem from="1768994269602" duration="1061000" />
-      <workItem from="1769069885276" duration="309000" />
+      <workItem from="1769069885276" duration="626000" />
     </task>
     <task id="LOCAL-00001" summary="bctpy_mrtrix neu">
       <option name="closed" value="true" />
@@ -94,15 +94,35 @@
       <option name="project" value="LOCAL" />
       <updated>1769070130243</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="bct_test funktioniert so">
+      <option name="closed" value="true" />
+      <created>1769070434454</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1769070434454</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="bctpy_mrtrix neu" />
-    <option name="LAST_COMMIT_MESSAGE" value="bctpy_mrtrix neu" />
+    <MESSAGE value="bct_test funktioniert so" />
+    <option name="LAST_COMMIT_MESSAGE" value="bct_test funktioniert so" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/bctpy_mrtrix$bct_test.coverage" NAME="bct_test Coverage Results" MODIFIED="1769070061725" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
