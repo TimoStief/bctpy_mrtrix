@@ -63,10 +63,15 @@ The application will:
 ## Usage
 
 ### Step 1: Select Input Directory
-1. Click the **Browse** button next to "Input Directory"
-2. Navigate to the folder containing your data
+1. **Enter the folder path**: Type or paste the full path to your data folder in the "Input Directory" field
+2. Click the **Validate** button to verify the path is valid
 3. The interface will automatically detect if the directory has the expected session structure (ses-1, ses-2, ses-3, ses-4)
-4. Confirmed sessions will be displayed
+4. Confirmed sessions will be displayed in green
+
+**Example paths:**
+- macOS: `/Users/username/data/connectivity_data`
+- Linux: `/home/username/data/connectivity_data`
+- Windows: `C:\Users\username\data\connectivity_data`
 
 ### Step 2: Configure Analysis
 - **Output Directory** (optional): Where results will be saved

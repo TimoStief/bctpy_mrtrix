@@ -35,7 +35,7 @@ The browser will automatically open at `http://127.0.0.1:5000`
 
 ### 3. Run Analysis
 
-1. **Select Input Folder**: Click "Browse" and choose a folder with:
+1. **Enter Input Folder Path**: Type or paste the full path to your data folder, then click "Validate":
    ```
    data/
    ├── ses-1/    (containing .npy files)
@@ -43,6 +43,7 @@ The browser will automatically open at `http://127.0.0.1:5000`
    ├── ses-3/    (containing .npy files)
    └── ses-4/    (containing .npy files)
    ```
+  Example: `/Users/karl/work/github/bctpy_mrtrix/Test_matrizen`
 
 2. **Confirm Sessions**: The app will automatically detect and validate sessions
 
@@ -157,6 +158,11 @@ The app automatically finds a free port. If it still fails, restart your termina
 ```bash
 chmod -R +r /path/to/your/data
 ```
+
+**Q: How do I find my folder path?**
+On macOS: Drag the folder into the Terminal or use `pwd` in the folder's directory
+On Windows: Right-click folder → "Copy as path"
+On Linux: Use `pwd` command in the folder's directory
 
 **Q: Large analysis taking too long?**
 This is normal! 100+ matrices can take 5-10 minutes depending on your hardware.
