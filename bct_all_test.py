@@ -7,9 +7,11 @@ import bct
 # -------------------------------
 # Pfade & Sessions
 # -------------------------------
-root = r"C:\Users\timo-\Desktop\Forschung\bctpy_mrtrix\Test_matrizen"
+# Get the directory where this script is located
+script_dir = os.path.dirname(os.path.abspath(__file__))
+root = os.path.join(script_dir, "Test_matrizen")
 sessions = ["ses-1", "ses-2", "ses-3", "ses-4"]
-results_dir = os.path.join(r"C:\Users\timo-\Desktop\Forschung\bctpy_mrtrix", "results")
+results_dir = os.path.join(script_dir, "results")
 os.makedirs(results_dir, exist_ok=True)
 
 # -------------------------------

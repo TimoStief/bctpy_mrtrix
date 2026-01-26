@@ -5,8 +5,10 @@ import pandas as pd
 # -------------------------------
 # Pfade
 # -------------------------------
-input_file = r"C:\Users\timo-\Desktop\Forschung\bctpy_mrtrix\results\bct_all_metrics.xlsx"
-output_dir = r"C:\Users\timo-\Desktop\Forschung\bctpy_mrtrix\Test_matrizen\converted_npy"
+# Get the directory where this script is located
+script_dir = os.path.dirname(os.path.abspath(__file__))
+input_file = os.path.join(script_dir, "results", "bct_all_metrics.xlsx")
+output_dir = os.path.join(script_dir, "Test_matrizen", "converted_npy")
 os.makedirs(output_dir, exist_ok=True)
 
 # -------------------------------
