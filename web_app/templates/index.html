@@ -17,8 +17,8 @@
                         <label class="form-label fw-bold">Input Directory</label>
                         <div class="input-group">
                             <input type="text" class="form-control" id="inputDir" placeholder="/path/to/data (e.g., /Users/karl/work/github/bctpy_mrtrix/Test_matrizen)">
-                            <button class="btn btn-primary" type="button" id="browseInputBtn">
-                                <i class="fas fa-check me-1"></i>Validate
+                            <button class="btn btn-primary" type="button" id="chooseInputBtn">
+                                <i class="fas fa-folder-open me-1"></i>Choose
                             </button>
                         </div>
                         <small class="text-muted d-block mt-2">
@@ -38,8 +38,8 @@
                         <label class="form-label fw-bold">Output Directory</label>
                         <div class="input-group">
                             <input type="text" class="form-control" id="outputDir" placeholder="Optional: leave empty for auto (input_dir/bct_output)">
-                            <button class="btn btn-secondary" type="button" id="browseOutputBtn">
-                                <i class="fas fa-check me-1"></i>Validate
+                            <button class="btn btn-outline-secondary" type="button" id="chooseOutputBtn">
+                                <i class="fas fa-folder-open me-1"></i>Choose
                             </button>
                         </div>
                         <small class="text-muted">Optional: leave empty for default location</small>
@@ -53,6 +53,98 @@
                             <option value="full">Full Analysis (All Metrics)</option>
                             <option value="analyze">Matrix Analysis Only</option>
                         </select>
+                    </div>
+
+                    <!-- Metric Selection -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-chart-line me-2"></i>Select Metrics
+                        </label>
+                        <div class="card bg-light border-0">
+                            <div class="card-body p-3">
+                                <!-- Basic Properties -->
+                                <div class="mb-3">
+                                    <h6 class="mb-2 text-primary">
+                                        <i class="fas fa-circle-notch me-1"></i>Basic Properties
+                                    </h6>
+                                    <div class="form-check">
+                                        <input class="form-check-input metric-checkbox" type="checkbox" id="metric_degree" value="degree" checked>
+                                        <label class="form-check-label" for="metric_degree">Degree/Strength</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input metric-checkbox" type="checkbox" id="metric_density" value="density" checked>
+                                        <label class="form-check-label" for="metric_density">Density/Sparsity</label>
+                                    </div>
+                                </div>
+
+                                <!-- Clustering & Community -->
+                                <div class="mb-3">
+                                    <h6 class="mb-2 text-primary">
+                                        <i class="fas fa-cubes me-1"></i>Clustering & Community
+                                    </h6>
+                                    <div class="form-check">
+                                        <input class="form-check-input metric-checkbox" type="checkbox" id="metric_clustering" value="clustering" checked>
+                                        <label class="form-check-label" for="metric_clustering">Clustering Coefficient</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input metric-checkbox" type="checkbox" id="metric_modularity" value="modularity" checked>
+                                        <label class="form-check-label" for="metric_modularity">Modularity/Community</label>
+                                    </div>
+                                </div>
+
+                                <!-- Integration & Efficiency -->
+                                <div class="mb-3">
+                                    <h6 class="mb-2 text-primary">
+                                        <i class="fas fa-sitemap me-1"></i>Integration & Efficiency
+                                    </h6>
+                                    <div class="form-check">
+                                        <input class="form-check-input metric-checkbox" type="checkbox" id="metric_efficiency" value="efficiency" checked>
+                                        <label class="form-check-label" for="metric_efficiency">Global Efficiency</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input metric-checkbox" type="checkbox" id="metric_pathlength" value="pathlength" checked>
+                                        <label class="form-check-label" for="metric_pathlength">Characteristic Path Length</label>
+                                    </div>
+                                </div>
+
+                                <!-- Centrality Measures -->
+                                <div class="mb-3">
+                                    <h6 class="mb-2 text-primary">
+                                        <i class="fas fa-star me-1"></i>Centrality Measures
+                                    </h6>
+                                    <div class="form-check">
+                                        <input class="form-check-input metric-checkbox" type="checkbox" id="metric_betweenness" value="betweenness" checked>
+                                        <label class="form-check-label" for="metric_betweenness">Betweenness Centrality</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input metric-checkbox" type="checkbox" id="metric_eigenvector" value="eigenvector">
+                                        <label class="form-check-label" for="metric_eigenvector">Eigenvector Centrality</label>
+                                    </div>
+                                </div>
+
+                                <!-- Network Properties -->
+                                <div class="mb-3">
+                                    <h6 class="mb-2 text-primary">
+                                        <i class="fas fa-network-wired me-1"></i>Network Properties
+                                    </h6>
+                                    <div class="form-check">
+                                        <input class="form-check-input metric-checkbox" type="checkbox" id="metric_assortativity" value="assortativity">
+                                        <label class="form-check-label" for="metric_assortativity">Assortativity</label>
+                                    </div>
+                                </div>
+
+                                <!-- Quality Control -->
+                                <div class="mb-0">
+                                    <h6 class="mb-2 text-primary">
+                                        <i class="fas fa-check-circle me-1"></i>Quality Control
+                                    </h6>
+                                    <div class="form-check">
+                                        <input class="form-check-input metric-checkbox" type="checkbox" id="metric_qc" value="qc" checked>
+                                        <label class="form-check-label" for="metric_qc">QC Metrics & Atlas Detection</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Start Button -->
@@ -138,25 +230,51 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function setupEventListeners() {
-    document.getElementById('browseInputBtn').addEventListener('click', () => pickFolder('input'));
-    document.getElementById('browseOutputBtn').addEventListener('click', () => pickFolder('output'));
+    document.getElementById('chooseInputBtn').addEventListener('click', () => pickFolder('input', true));
+    document.getElementById('chooseOutputBtn').addEventListener('click', () => pickFolder('output', true));
+    document.getElementById('inputDir').addEventListener('input', updateStartButtonState);
     document.getElementById('startAnalysisBtn').addEventListener('click', startAnalysis);
 }
 
-}
-async function pickFolder(type) {
+async function pickFolder(type, usePicker = false) {
     const inputElem = type === 'input' ? document.getElementById('inputDir') : document.getElementById('outputDir');
     const errorElem = type === 'input' ? document.getElementById('inputError') : document.getElementById('outputError');
-    const path = inputElem.value.trim();
-    
+    let path = inputElem.value.trim();
+
     errorElem.classList.add('d-none');
-    
+
+    if (usePicker) {
+        try {
+            const response = await fetch('/api/pick-folder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type })
+            });
+            const data = await response.json();
+            if (data.success && data.path) {
+                path = data.path;
+                inputElem.value = path;
+            } else {
+                if (data.message && data.message.includes('not')) {
+                    errorElem.textContent = data.message;
+                    errorElem.classList.remove('d-none');
+                }
+                return; // cancelled or unsupported
+            }
+        } catch (err) {
+            console.error('Picker error:', err);
+            errorElem.textContent = 'Picker unavailable; please paste a path and Validate.';
+            errorElem.classList.remove('d-none');
+            return;
+        }
+    }
+
     if (!path) {
         errorElem.textContent = 'Please enter a folder path';
         errorElem.classList.remove('d-none');
         return;
     }
-    
+
     try {
         const response = await fetch('/api/validate-path', {
             method: 'POST',
@@ -181,6 +299,7 @@ async function pickFolder(type) {
         errorElem.textContent = 'Error validating path: ' + error.message;
         errorElem.classList.remove('d-none');
     }
+}
 
 async function checkSessions(path) {
     try {
@@ -218,8 +337,17 @@ async function startAnalysis() {
     const outputDir = document.getElementById('outputDir').value.trim();
     const analysisType = document.getElementById('analysisType').value;
     
+    // Collect selected metrics
+    const selectedMetrics = Array.from(document.querySelectorAll('.metric-checkbox:checked'))
+        .map(cb => cb.value);
+    
     if (!inputDir) {
         alert('Please select an input directory');
+        return;
+    }
+    
+    if (selectedMetrics.length === 0) {
+        alert('Please select at least one metric to calculate');
         return;
     }
     
@@ -234,7 +362,8 @@ async function startAnalysis() {
             body: JSON.stringify({
                 input_dir: inputDir,
                 output_dir: outputDir,
-                analysis_type: analysisType
+                analysis_type: analysisType,
+                selected_metrics: selectedMetrics
             })
         });
         

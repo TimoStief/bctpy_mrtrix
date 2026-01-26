@@ -9,10 +9,12 @@ import json
 import webbrowser
 import threading
 import socket
-from pathlib import Path
-from flask import Flask, render_template, jsonify, request, send_file
-from waitress import serve
+import platform
+import subprocess
 from queue import Queue
+
+from flask import Flask, request, jsonify, render_template, send_file
+from waitress import serve
 
 from bct_analyzer import BCTAnalyzer
 
@@ -64,6 +66,7 @@ def analyze():
         input_dir = data.get('input_dir', '')
         output_dir = data.get('output_dir', '')
         analysis_type = data.get('analysis_type', 'full')
+        selected_metrics = data.get('selected_metrics', [])
         
         if not input_dir or not os.path.isdir(input_dir):
             return jsonify({'success': False, 'error': 'Invalid input directory'}), 400
@@ -75,9 +78,11 @@ def analyze():
         
         # Create analyzer with output capture
         output_capture.clear()
-        current_analyzer = BCTAnalyzer(output_callback=output_capture.write)
+        current_analyzer = BCTAnalyzer(output_callback=output_capture.write, selected_metrics=selected_metrics)
         
         output_capture.write(f"🚀 Starting analysis (type: {analysis_type})\n")
+        if selected_metrics:
+            output_capture.write(f"📊 Selected metrics: {', '.join(selected_metrics)}\n")
         
         if analysis_type == 'full' or analysis_type == 'analyze':
             df_results, summary = current_analyzer.analyze_matrices(input_dir, output_dir)
@@ -104,7 +109,6 @@ def get_logs():
     })
 
 
-@app.route('/api/pick-folder', methods=['POST'])
 @app.route('/api/validate-path', methods=['POST'])
 def validate_path():
     """Validate and get info about a folder path"""
@@ -138,6 +142,38 @@ def validate_path():
             'success': False,
             'error': str(e)
         }), 500
+
+
+@app.route('/api/pick-folder', methods=['POST'])
+def pick_folder():
+    """Open a native folder picker when supported (macOS best effort)"""
+    try:
+        data = request.get_json() or {}
+        folder_type = data.get('type', 'input')
+
+        system = platform.system().lower()
+        if system == 'darwin':
+            prompt = f"Select {folder_type.title()} Folder"
+            script = f'''osascript -e 'set chosenFolder to POSIX path of (choose folder with prompt "{prompt}")' '''
+            result = subprocess.run(script, shell=True, capture_output=True, text=True)
+            if result.returncode == 0:
+                path = result.stdout.strip()
+                if path:
+                    return jsonify({'success': True, 'path': path})
+            # fallthrough if user cancels
+            return jsonify({'success': False, 'message': 'No folder selected'})
+        elif system == 'windows':
+            return jsonify({
+                'success': False,
+                'message': 'Native picker not supported here. Please paste the folder path and click Validate.'
+            })
+        else:  # linux/others
+            return jsonify({
+                'success': False,
+                'message': 'Native picker not available. Please paste the folder path and click Validate.'
+            })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/check-sessions', methods=['POST'])
