@@ -13,8 +13,8 @@ from pathlib import Path
 from flask import Flask, render_template, jsonify, request, send_file
 from waitress import serve
 from queue import Queue
-from bct_analyzer import BCTAnalyzer
 
+from bct_analyzer import BCTAnalyzer
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.config['JSON_SORT_KEYS'] = False
@@ -104,34 +104,40 @@ def get_logs():
     })
 
 
-@app.route('/api/get-directory', methods=['POST'])
-def get_directory():
-    """Browse directory"""
+@app.route('/api/pick-folder', methods=['POST'])
+@app.route('/api/validate-path', methods=['POST'])
+def validate_path():
+    """Validate and get info about a folder path"""
     try:
-        path = request.get_json().get('path', os.path.expanduser('~'))
+        data = request.get_json()
+        path = data.get('path', '').strip()
+        
+        if not path:
+            return jsonify({
+                'success': False,
+                'error': 'Please enter a folder path'
+            })
+        
+        # Expand home directory if needed
+        path = os.path.expanduser(path)
         
         if not os.path.isdir(path):
-            path = os.path.dirname(path)
-        
-        # List subdirectories
-        try:
-            items = os.listdir(path)
-            folders = sorted([
-                item for item in items
-                if os.path.isdir(os.path.join(path, item)) and not item.startswith('.')
-            ])
-        except PermissionError:
-            folders = []
+            return jsonify({
+                'success': False,
+                'error': f'Folder not found: {path}'
+            })
         
         return jsonify({
             'success': True,
-            'current_path': path,
-            'folders': folders,
-            'has_session_structure': any(s in folders for s in ['ses-1', 'ses-2', 'ses-3', 'ses-4'])
+            'path': path,
+            'exists': True
         })
     
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 
 @app.route('/api/check-sessions', methods=['POST'])
@@ -190,11 +196,17 @@ def shutdown():
     return jsonify({'success': True})
 
 
-def find_free_port():
+def find_free_port(start_port=5000, max_tries=10):
     """Find a free port on localhost"""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(('localhost', 0))
-        return s.getsockname()[1]
+    for port in range(start_port, start_port + max_tries):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                s.bind(('127.0.0.1', port))
+                return port
+        except OSError:
+            continue
+    return start_port  # Fallback to start port
 
 
 def open_browser(url):

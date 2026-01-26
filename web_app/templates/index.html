@@ -16,14 +16,15 @@
                     <div class="mb-4">
                         <label class="form-label fw-bold">Input Directory</label>
                         <div class="input-group">
-                            <input type="text" class="form-control" id="inputDir" placeholder="/path/to/data" readonly>
+                            <input type="text" class="form-control" id="inputDir" placeholder="/path/to/data (e.g., /Users/karl/work/github/bctpy_mrtrix/Test_matrizen)">
                             <button class="btn btn-primary" type="button" id="browseInputBtn">
-                                <i class="fas fa-folder me-1"></i>Browse
+                                <i class="fas fa-check me-1"></i>Validate
                             </button>
                         </div>
                         <small class="text-muted d-block mt-2">
                             Directory should contain: ses-1, ses-2, ses-3, ses-4 folders with .npy files
                         </small>
+                        <div id="inputError" class="alert alert-danger d-none mt-2" role="alert"></div>
                     </div>
 
                     <!-- Session Detection -->
@@ -36,12 +37,13 @@
                     <div class="mb-4">
                         <label class="form-label fw-bold">Output Directory</label>
                         <div class="input-group">
-                            <input type="text" class="form-control" id="outputDir" placeholder="Auto: input_dir/bct_output">
+                            <input type="text" class="form-control" id="outputDir" placeholder="Optional: leave empty for auto (input_dir/bct_output)">
                             <button class="btn btn-secondary" type="button" id="browseOutputBtn">
-                                <i class="fas fa-folder me-1"></i>Browse
+                                <i class="fas fa-check me-1"></i>Validate
                             </button>
                         </div>
-                        <small class="text-muted">Leave empty for default location</small>
+                        <small class="text-muted">Optional: leave empty for default location</small>
+                        <div id="outputError" class="alert alert-danger d-none mt-2" role="alert"></div>
                     </div>
 
                     <!-- Analysis Type -->
@@ -124,41 +126,10 @@
     </div>
 </div>
 
-<!-- Directory Browser Modal -->
-<div class="modal fade" id="directoryModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalTitle">Browse Directories</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="input-group mb-3">
-                    <input type="text" class="form-control" id="modalCurrentPath" readonly>
-                    <button class="btn btn-secondary" type="button" id="modalGoUp">
-                        <i class="fas fa-arrow-up me-1"></i>Up
-                    </button>
-                </div>
-                <div id="folderList" class="folder-list">
-                    <div class="text-center text-muted">
-                        <i class="fas fa-spinner fa-spin me-2"></i>Loading...
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="modalSelectBtn">Select This Directory</button>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-let currentMode = null;
-let selectedPath = null;
-const outputDir = null;
 let logUpdateInterval = null;
 
 // Initialize
@@ -167,95 +138,49 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function setupEventListeners() {
-    document.getElementById('browseInputBtn').addEventListener('click', () => browseDirectory('input'));
-    document.getElementById('browseOutputBtn').addEventListener('click', () => browseDirectory('output'));
+    document.getElementById('browseInputBtn').addEventListener('click', () => pickFolder('input'));
+    document.getElementById('browseOutputBtn').addEventListener('click', () => pickFolder('output'));
     document.getElementById('startAnalysisBtn').addEventListener('click', startAnalysis);
-    document.getElementById('modalGoUp').addEventListener('click', goUpDirectory);
-    document.getElementById('modalSelectBtn').addEventListener('click', selectDirectory);
 }
 
-async function browseDirectory(mode) {
-    currentMode = mode;
-    selectedPath = mode === 'input' ? document.getElementById('inputDir').value : document.getElementById('outputDir').value;
+}
+async function pickFolder(type) {
+    const inputElem = type === 'input' ? document.getElementById('inputDir') : document.getElementById('outputDir');
+    const errorElem = type === 'input' ? document.getElementById('inputError') : document.getElementById('outputError');
+    const path = inputElem.value.trim();
     
-    if (!selectedPath) {
-        selectedPath = '/Users/karl/work/github';
+    errorElem.classList.add('d-none');
+    
+    if (!path) {
+        errorElem.textContent = 'Please enter a folder path';
+        errorElem.classList.remove('d-none');
+        return;
     }
     
-    await loadDirectoryList(selectedPath);
-    
-    document.getElementById('modalTitle').textContent = `Select ${mode === 'input' ? 'Input' : 'Output'} Directory`;
-    new bootstrap.Modal(document.getElementById('directoryModal')).show();
-}
-
-async function loadDirectoryList(path) {
     try {
-        const response = await fetch('/api/get-directory', {
+        const response = await fetch('/api/validate-path', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ path })
         });
         
         const data = await response.json();
+        
         if (data.success) {
-            selectedPath = data.current_path;
-            document.getElementById('modalCurrentPath').value = selectedPath;
-            
-            const folderList = document.getElementById('folderList');
-            folderList.innerHTML = '';
-            
-            if (data.folders.length === 0) {
-                folderList.innerHTML = '<div class="text-center text-muted">No folders found</div>';
-            } else {
-                data.folders.forEach(folder => {
-                    const item = document.createElement('div');
-                    item.className = 'folder-item';
-                    item.innerHTML = `
-                        <div class="folder-name" onclick="selectFolderItem(this)">
-                            <i class="fas fa-folder me-2 text-warning"></i>${folder}
-                        </div>
-                    `;
-                    item.dataset.folder = folder;
-                    folderList.appendChild(item);
-                });
+            inputElem.value = data.path;
+            if (type === 'input') {
+                await checkSessions(data.path);
             }
+            updateStartButtonState();
+        } else {
+            errorElem.textContent = data.error || 'Invalid path';
+            errorElem.classList.remove('d-none');
         }
     } catch (error) {
-        console.error('Error loading directory:', error);
-        alert('Error loading directory');
+        console.error('Error validating path:', error);
+        errorElem.textContent = 'Error validating path: ' + error.message;
+        errorElem.classList.remove('d-none');
     }
-}
-
-function selectFolderItem(elem) {
-    document.querySelectorAll('.folder-item').forEach(e => e.classList.remove('active'));
-    elem.parentElement.classList.add('active');
-    selectedPath = elem.parentElement.dataset.folder;
-}
-
-async function goUpDirectory() {
-    const path = document.getElementById('modalCurrentPath').value;
-    const parent = path.substring(0, path.lastIndexOf('/')) || '/';
-    await loadDirectoryList(parent);
-}
-
-async function selectDirectory() {
-    const fullPath = document.getElementById('modalCurrentPath').value;
-    
-    if (currentMode === 'input') {
-        document.getElementById('inputDir').value = fullPath;
-        
-        // Check for sessions
-        await checkSessions(fullPath);
-        
-        // Enable start button if input is selected
-        updateStartButtonState();
-    } else {
-        document.getElementById('outputDir').value = fullPath;
-        updateStartButtonState();
-    }
-    
-    bootstrap.Modal.getInstance(document.getElementById('directoryModal')).hide();
-}
 
 async function checkSessions(path) {
     try {
