@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+
+{% block title %}BCT Analysis - Home{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row gy-4">
+        <!-- Column 1: Input Settings -->
+        <div class="col-lg-4">
+            <div class="card feature-card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-folder-open me-2"></i>Input Settings</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Input Directory Selector -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Input Directory</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="inputDir" placeholder="/path/to/data" readonly>
+                            <button class="btn btn-primary" type="button" id="browseInputBtn">
+                                <i class="fas fa-folder me-1"></i>Browse
+                            </button>
+                        </div>
+                        <small class="text-muted d-block mt-2">
+                            Directory should contain: ses-1, ses-2, ses-3, ses-4 folders with .npy files
+                        </small>
+                    </div>
+
+                    <!-- Session Detection -->
+                    <div id="sessionInfo" class="alert alert-info d-none" role="alert">
+                        <h6 class="mb-2"><i class="fas fa-check-circle me-2"></i>Sessions Found:</h6>
+                        <ul class="mb-0" id="sessionList"></ul>
+                    </div>
+
+                    <!-- Output Directory -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Output Directory</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="outputDir" placeholder="Auto: input_dir/bct_output">
+                            <button class="btn btn-secondary" type="button" id="browseOutputBtn">
+                                <i class="fas fa-folder me-1"></i>Browse
+                            </button>
+                        </div>
+                        <small class="text-muted">Leave empty for default location</small>
+                    </div>
+
+                    <!-- Analysis Type -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Analysis Type</label>
+                        <select class="form-select" id="analysisType">
+                            <option value="full">Full Analysis (All Metrics)</option>
+                            <option value="analyze">Matrix Analysis Only</option>
+                        </select>
+                    </div>
+
+                    <!-- Start Button -->
+                    <button class="btn btn-success btn-lg w-100" id="startAnalysisBtn" disabled>
+                        <i class="fas fa-play me-2"></i>Start Analysis
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Column 2: Terminal Output -->
+        <div class="col-lg-8">
+            <div class="card feature-card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-terminal me-2"></i>Analysis Terminal</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id="terminalOutput" class="terminal-output">
+                        <div class="terminal-welcome">
+                            <p>Welcome to BCT Analysis Web Interface</p>
+                            <p>Select input directory and click "Start Analysis" to begin</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-light">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <span id="logStatus">Waiting for input...</span>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="row gy-4 mt-3" id="resultsSection" style="display: none;">
+        <div class="col-lg-12">
+            <div class="card feature-card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Analysis Results</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-value" id="totalMatrices">0</div>
+                                <div class="stat-label">Matrices Processed</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-value" id="sessionCount">0</div>
+                                <div class="stat-label">Sessions Found</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-value" id="subjectCount">0</div>
+                                <div class="stat-label">Subjects</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <a class="btn btn-outline-success btn-lg w-100" id="downloadResultsBtn" href="#">
+                                <i class="fas fa-download me-2"></i>Download Results
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Directory Browser Modal -->
+<div class="modal fade" id="directoryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Browse Directories</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" id="modalCurrentPath" readonly>
+                    <button class="btn btn-secondary" type="button" id="modalGoUp">
+                        <i class="fas fa-arrow-up me-1"></i>Up
+                    </button>
+                </div>
+                <div id="folderList" class="folder-list">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-spinner fa-spin me-2"></i>Loading...
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="modalSelectBtn">Select This Directory</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentMode = null;
+let selectedPath = null;
+const outputDir = null;
+let logUpdateInterval = null;
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    document.getElementById('browseInputBtn').addEventListener('click', () => browseDirectory('input'));
+    document.getElementById('browseOutputBtn').addEventListener('click', () => browseDirectory('output'));
+    document.getElementById('startAnalysisBtn').addEventListener('click', startAnalysis);
+    document.getElementById('modalGoUp').addEventListener('click', goUpDirectory);
+    document.getElementById('modalSelectBtn').addEventListener('click', selectDirectory);
+}
+
+async function browseDirectory(mode) {
+    currentMode = mode;
+    selectedPath = mode === 'input' ? document.getElementById('inputDir').value : document.getElementById('outputDir').value;
+    
+    if (!selectedPath) {
+        selectedPath = '/Users/karl/work/github';
+    }
+    
+    await loadDirectoryList(selectedPath);
+    
+    document.getElementById('modalTitle').textContent = `Select ${mode === 'input' ? 'Input' : 'Output'} Directory`;
+    new bootstrap.Modal(document.getElementById('directoryModal')).show();
+}
+
+async function loadDirectoryList(path) {
+    try {
+        const response = await fetch('/api/get-directory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            selectedPath = data.current_path;
+            document.getElementById('modalCurrentPath').value = selectedPath;
+            
+            const folderList = document.getElementById('folderList');
+            folderList.innerHTML = '';
+            
+            if (data.folders.length === 0) {
+                folderList.innerHTML = '<div class="text-center text-muted">No folders found</div>';
+            } else {
+                data.folders.forEach(folder => {
+                    const item = document.createElement('div');
+                    item.className = 'folder-item';
+                    item.innerHTML = `
+                        <div class="folder-name" onclick="selectFolderItem(this)">
+                            <i class="fas fa-folder me-2 text-warning"></i>${folder}
+                        </div>
+                    `;
+                    item.dataset.folder = folder;
+                    folderList.appendChild(item);
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error loading directory:', error);
+        alert('Error loading directory');
+    }
+}
+
+function selectFolderItem(elem) {
+    document.querySelectorAll('.folder-item').forEach(e => e.classList.remove('active'));
+    elem.parentElement.classList.add('active');
+    selectedPath = elem.parentElement.dataset.folder;
+}
+
+async function goUpDirectory() {
+    const path = document.getElementById('modalCurrentPath').value;
+    const parent = path.substring(0, path.lastIndexOf('/')) || '/';
+    await loadDirectoryList(parent);
+}
+
+async function selectDirectory() {
+    const fullPath = document.getElementById('modalCurrentPath').value;
+    
+    if (currentMode === 'input') {
+        document.getElementById('inputDir').value = fullPath;
+        
+        // Check for sessions
+        await checkSessions(fullPath);
+        
+        // Enable start button if input is selected
+        updateStartButtonState();
+    } else {
+        document.getElementById('outputDir').value = fullPath;
+        updateStartButtonState();
+    }
+    
+    bootstrap.Modal.getInstance(document.getElementById('directoryModal')).hide();
+}
+
+async function checkSessions(path) {
+    try {
+        const response = await fetch('/api/check-sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path })
+        });
+        
+        const data = await response.json();
+        const sessionInfo = document.getElementById('sessionInfo');
+        const sessionList = document.getElementById('sessionList');
+        
+        if (data.has_sessions) {
+            sessionList.innerHTML = data.sessions
+                .map(s => `<li>${s.name}: ${s.files} file(s)</li>`)
+                .join('');
+            sessionInfo.classList.remove('d-none');
+        } else {
+            sessionInfo.classList.add('d-none');
+        }
+    } catch (error) {
+        console.error('Error checking sessions:', error);
+    }
+}
+
+function updateStartButtonState() {
+    const inputDir = document.getElementById('inputDir').value.trim();
+    const startBtn = document.getElementById('startAnalysisBtn');
+    startBtn.disabled = !inputDir;
+}
+
+async function startAnalysis() {
+    const inputDir = document.getElementById('inputDir').value.trim();
+    const outputDir = document.getElementById('outputDir').value.trim();
+    const analysisType = document.getElementById('analysisType').value;
+    
+    if (!inputDir) {
+        alert('Please select an input directory');
+        return;
+    }
+    
+    // Clear terminal
+    document.getElementById('terminalOutput').innerHTML = '';
+    document.getElementById('startAnalysisBtn').disabled = true;
+    
+    try {
+        const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                input_dir: inputDir,
+                output_dir: outputDir,
+                analysis_type: analysisType
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Start polling for logs
+            startLogUpdate();
+            
+            // Wait a bit then show results
+            setTimeout(() => {
+                showResults(data.summary);
+            }, 2000);
+        } else {
+            appendTerminalOutput(`❌ Error: ${data.error}`);
+        }
+    } catch (error) {
+        console.error('Analysis error:', error);
+        appendTerminalOutput(`❌ Error: ${error.message}`);
+    } finally {
+        document.getElementById('startAnalysisBtn').disabled = false;
+    }
+}
+
+function startLogUpdate() {
+    if (logUpdateInterval) clearInterval(logUpdateInterval);
+    
+    const updateLogs = async () => {
+        try {
+            const response = await fetch('/api/logs');
+            const data = await response.json();
+            
+            const terminal = document.getElementById('terminalOutput');
+            terminal.innerHTML = `<pre>${escapeHtml(data.logs)}</pre>`;
+            terminal.scrollTop = terminal.scrollHeight;
+            
+            document.getElementById('logStatus').textContent = `${data.lines} log lines`;
+        } catch (error) {
+            console.error('Error updating logs:', error);
+        }
+    };
+    
+    updateLogs();
+    logUpdateInterval = setInterval(updateLogs, 500);
+}
+
+function appendTerminalOutput(message) {
+    const terminal = document.getElementById('terminalOutput');
+    const pre = terminal.querySelector('pre');
+    if (!pre) {
+        terminal.innerHTML = '<pre></pre>';
+    }
+    terminal.querySelector('pre').textContent += message + '\n';
+    terminal.scrollTop = terminal.scrollHeight;
+}
+
+function showResults(summary) {
+    const resultsSection = document.getElementById('resultsSection');
+    
+    if (summary && summary.total_matrices > 0) {
+        document.getElementById('totalMatrices').textContent = summary.total_matrices;
+        document.getElementById('sessionCount').textContent = summary.sessions_processed.length;
+        document.getElementById('subjectCount').textContent = summary.subjects.length;
+        
+        resultsSection.style.display = 'block';
+        
+        // Setup download button
+        const outputDir = document.getElementById('outputDir').value;
+        document.getElementById('downloadResultsBtn').href = 
+            `/api/download/bct_analysis_results.xlsx?output_dir=${encodeURIComponent(outputDir)}`;
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+{% endblock %}

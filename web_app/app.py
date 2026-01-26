@@ -1,0 +1,230 @@
+"""
+Flask Web Application for BCT Analysis
+Provides web interface for running brain connectivity analysis
+"""
+
+import os
+import sys
+import json
+import webbrowser
+import threading
+import socket
+from pathlib import Path
+from flask import Flask, render_template, jsonify, request, send_file
+from waitress import serve
+from queue import Queue
+from bct_analyzer import BCTAnalyzer
+
+
+app = Flask(__name__, template_folder='templates', static_folder='static')
+app.config['JSON_SORT_KEYS'] = False
+
+# Global state
+analysis_queue = Queue()
+current_analyzer = None
+output_log = []
+
+
+class OutputCapture:
+    """Capture output from analyzer"""
+    def __init__(self, max_lines=1000):
+        self.lines = []
+        self.max_lines = max_lines
+    
+    def write(self, message):
+        if message.strip():
+            self.lines.append(message)
+            if len(self.lines) > self.max_lines:
+                self.lines.pop(0)
+    
+    def get_all(self):
+        return "\n".join(self.lines)
+    
+    def clear(self):
+        self.lines = []
+
+
+output_capture = OutputCapture()
+
+
+# Routes
+@app.route('/')
+def index():
+    """Main page"""
+    return render_template('index.html')
+
+
+@app.route('/api/analyze', methods=['POST'])
+def analyze():
+    """Start analysis with selected folders"""
+    global current_analyzer
+    
+    try:
+        data = request.get_json()
+        input_dir = data.get('input_dir', '')
+        output_dir = data.get('output_dir', '')
+        analysis_type = data.get('analysis_type', 'full')
+        
+        if not input_dir or not os.path.isdir(input_dir):
+            return jsonify({'success': False, 'error': 'Invalid input directory'}), 400
+        
+        if not output_dir:
+            output_dir = os.path.join(input_dir, 'bct_output')
+        
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Create analyzer with output capture
+        output_capture.clear()
+        current_analyzer = BCTAnalyzer(output_callback=output_capture.write)
+        
+        output_capture.write(f"🚀 Starting analysis (type: {analysis_type})\n")
+        
+        if analysis_type == 'full' or analysis_type == 'analyze':
+            df_results, summary = current_analyzer.analyze_matrices(input_dir, output_dir)
+            return jsonify({
+                'success': True,
+                'output_dir': output_dir,
+                'summary': summary,
+                'results_count': len(df_results)
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Unknown analysis type'}), 400
+    
+    except Exception as e:
+        output_capture.write(f"❌ Error: {str(e)}\n")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/logs')
+def get_logs():
+    """Get current analysis logs"""
+    return jsonify({
+        'logs': output_capture.get_all(),
+        'lines': len(output_capture.lines)
+    })
+
+
+@app.route('/api/get-directory', methods=['POST'])
+def get_directory():
+    """Browse directory"""
+    try:
+        path = request.get_json().get('path', os.path.expanduser('~'))
+        
+        if not os.path.isdir(path):
+            path = os.path.dirname(path)
+        
+        # List subdirectories
+        try:
+            items = os.listdir(path)
+            folders = sorted([
+                item for item in items
+                if os.path.isdir(os.path.join(path, item)) and not item.startswith('.')
+            ])
+        except PermissionError:
+            folders = []
+        
+        return jsonify({
+            'success': True,
+            'current_path': path,
+            'folders': folders,
+            'has_session_structure': any(s in folders for s in ['ses-1', 'ses-2', 'ses-3', 'ses-4'])
+        })
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/check-sessions', methods=['POST'])
+def check_sessions():
+    """Check if directory has expected session structure"""
+    try:
+        path = request.get_json().get('path', '')
+        
+        if not os.path.isdir(path):
+            return jsonify({'success': False, 'has_sessions': False})
+        
+        sessions = ['ses-1', 'ses-2', 'ses-3', 'ses-4']
+        found = []
+        
+        for session in sessions:
+            session_path = os.path.join(path, session)
+            if os.path.isdir(session_path):
+                npy_count = len([f for f in os.listdir(session_path) if f.endswith('.npy')])
+                found.append({'name': session, 'files': npy_count})
+        
+        return jsonify({
+            'success': True,
+            'has_sessions': len(found) > 0,
+            'sessions': found
+        })
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/download/<filename>')
+def download_file(filename):
+    """Download output file"""
+    try:
+        # Security: only allow alphanumeric and specific chars
+        if not all(c.isalnum() or c in '._-' for c in filename):
+            return 'Invalid filename', 400
+        
+        output_dir = request.args.get('output_dir', '')
+        file_path = os.path.join(output_dir, filename)
+        
+        if not os.path.exists(file_path):
+            return 'File not found', 404
+        
+        return send_file(file_path, as_attachment=True)
+    
+    except Exception as e:
+        return str(e), 500
+
+
+@app.route('/shutdown', methods=['POST'])
+def shutdown():
+    """Shutdown the server"""
+    output_capture.write("\n⏹️ Shutdown requested...\n")
+    os._exit(0)
+    return jsonify({'success': True})
+
+
+def find_free_port():
+    """Find a free port on localhost"""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(('localhost', 0))
+        return s.getsockname()[1]
+
+
+def open_browser(url):
+    """Wait for server to start and open browser"""
+    threading.Timer(1.5, lambda: webbrowser.open(url)).start()
+
+
+def main():
+    """Main entry point"""
+    # Configuration
+    port = find_free_port()
+    host = '127.0.0.1'
+    url = f'http://{host}:{port}'
+    
+    print("\n" + "=" * 60)
+    print("🧠 BCT Analysis Web Interface")
+    print("=" * 60)
+    print(f"🌐 Starting server at {url}")
+    print("=" * 60 + "\n")
+    
+    # Open browser
+    open_browser(url)
+    
+    # Run with Waitress
+    try:
+        serve(app, host=host, port=port, threads=4)
+    except KeyboardInterrupt:
+        print("\n⏹️ Stopping server...")
+        sys.exit(0)
+
+
+if __name__ == '__main__':
+    main()

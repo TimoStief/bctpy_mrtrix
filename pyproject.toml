@@ -10,4 +10,6 @@ dependencies = [
     "scipy>=1.7.0",
     "statsmodels>=0.13.0",
     "openpyxl>=3.0.0",
+    "flask>=2.0.0",
+    "waitress>=2.0.0",
 ]
