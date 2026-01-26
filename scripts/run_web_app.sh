@@ -18,18 +18,29 @@ if [ ! -d "$PROJECT_ROOT/.venv" ]; then
     exit 1
 fi
 
-# Activate venv
-source "$PROJECT_ROOT/.venv/bin/activate"
+PYTHON="$PROJECT_ROOT/.venv/bin/python"
+PIP="$PROJECT_ROOT/.venv/bin/pip"
 
-# Navigate to web_app
-cd "$PROJECT_ROOT/web_app"
-
-# Install Flask and Waitress if needed
 echo "Checking dependencies..."
-python -m pip install flask waitress > /dev/null 2>&1
+
+# Ensure pip exists inside the venv (uv venv may omit pip)
+if ! "$PYTHON" -m pip --version >/dev/null 2>&1; then
+    echo "• pip not found in venv; installing via ensurepip..."
+    "$PYTHON" -m ensurepip --upgrade >/dev/null 2>&1 || true
+fi
+
+# Install Flask/Waitress using pip if available, otherwise fallback to uv
+if "$PYTHON" -m pip --version >/dev/null 2>&1; then
+    "$PYTHON" -m pip install --quiet flask waitress
+else
+    echo "• pip still unavailable; using uv to install dependencies..."
+    cd "$PROJECT_ROOT"
+    uv pip install flask waitress
+fi
 
 echo "✓ Starting web interface..."
 echo ""
 
-# Run the Flask app
-python app.py
+# Run the Flask app with explicit interpreter
+cd "$PROJECT_ROOT/web_app"
+exec "$PYTHON" app.py
