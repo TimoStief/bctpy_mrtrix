@@ -21,14 +21,14 @@ This will:
 ### 2. Launch Web Interface
 
 ```bash
-# Option 1: Use the launcher script
+# Option 1: PowerShell (Windows)
+.\scripts\run_web_app.ps1
+
+# Option 2: Bash (macOS/Linux)
 bash scripts/run_web_app.sh
 
-# Option 2: Direct Python
+# Option 3: Direct Python
 cd web_app && python app.py
-
-# Option 3: With UV (no venv activation needed)
-cd web_app && uv run python app.py
 ```
 
 The browser will automatically open at `http://127.0.0.1:5000`

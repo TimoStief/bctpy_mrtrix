@@ -13,6 +13,13 @@ import platform
 import subprocess
 from queue import Queue
 
+try:
+    import tkinter
+    from tkinter import filedialog
+    HAS_TKINTER = True
+except ImportError:
+    HAS_TKINTER = False
+
 from flask import Flask, request, jsonify, render_template, send_file
 from waitress import serve
 
@@ -192,11 +199,40 @@ def pick_folder():
             # fallthrough if user cancels
             return jsonify({'success': False, 'message': 'No folder selected'})
         elif system == 'windows':
-            return jsonify({
-                'success': False,
-                'message': 'Native picker not supported here. Please paste the folder path and click Validate.'
-            })
+            if not HAS_TKINTER:
+                return jsonify({
+                    'success': False,
+                    'message': 'Native picker (Tkinter) not installed. Please paste the path.'
+                })
+            
+            # Use Tkinter for Windows folder picking
+            try:
+                root = tkinter.Tk()
+                root.withdraw()
+                root.attributes("-topmost", True)
+                path = filedialog.askdirectory(title=f"Select {folder_type.title()} Folder")
+                root.destroy()
+                
+                if path:
+                    # Ensure path uses forward slashes or consistent formatting
+                    path = os.path.normpath(path).replace('\\', '/')
+                    return jsonify({'success': True, 'path': path})
+                return jsonify({'success': False, 'message': 'No folder selected'})
+            except Exception as e:
+                return jsonify({'success': False, 'message': f'Picker error: {str(e)}'})
         else:  # linux/others
+            # Try to use tkinter on Linux if available
+            if HAS_TKINTER:
+                try:
+                    root = tkinter.Tk()
+                    root.withdraw()
+                    path = filedialog.askdirectory(title=f"Select {folder_type.title()} Folder")
+                    root.destroy()
+                    if path:
+                        return jsonify({'success': True, 'path': path})
+                except:
+                    pass
+            
             return jsonify({
                 'success': False,
                 'message': 'Native picker not available. Please paste the folder path and click Validate.'
