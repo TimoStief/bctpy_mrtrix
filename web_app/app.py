@@ -69,6 +69,14 @@ def analyze():
         selected_metrics = data.get('selected_metrics', [])
         output_format = data.get('output_format', 'parquet')
         
+        # New DSI Studio / preprocessing options
+        atlas_filter = data.get('atlas_filter', '')
+        dsi_metric = data.get('dsi_metric', 'count')
+        threshold = data.get('threshold', None)
+        threshold_type = data.get('threshold_type', 'absolute')
+        normalize = data.get('normalize', False)
+        binarize = data.get('binarize', False)
+        
         if not input_dir or not os.path.isdir(input_dir):
             return jsonify({'success': False, 'error': 'Invalid input directory'}), 400
         
@@ -77,12 +85,31 @@ def analyze():
         
         os.makedirs(output_dir, exist_ok=True)
         
-        # Create analyzer with output capture
+        # Create analyzer with output capture and all options
         output_capture.clear()
-        current_analyzer = BCTAnalyzer(output_callback=output_capture.write, selected_metrics=selected_metrics, output_format=output_format)
+        current_analyzer = BCTAnalyzer(
+            output_callback=output_capture.write,
+            selected_metrics=selected_metrics if selected_metrics else None,
+            output_format=output_format,
+            atlas_filter=atlas_filter if atlas_filter else None,
+            dsi_metric=dsi_metric,
+            threshold=float(threshold) if threshold else None,
+            threshold_type=threshold_type,
+            normalize=normalize,
+            binarize=binarize
+        )
         
         output_capture.write(f"🚀 Starting analysis (type: {analysis_type})\n")
         output_capture.write(f"💾 Output format: {output_format}\n")
+        if atlas_filter:
+            output_capture.write(f"🧠 Atlas filter: {atlas_filter}\n")
+        output_capture.write(f"📊 DSI metric: {dsi_metric}\n")
+        if threshold:
+            output_capture.write(f"✂️ Threshold: {threshold} ({threshold_type})\n")
+        if normalize:
+            output_capture.write(f"📏 Normalizing weights\n")
+        if binarize:
+            output_capture.write(f"🔲 Binarizing matrix\n")
         if selected_metrics:
             output_capture.write(f"📊 Selected metrics: {', '.join(selected_metrics)}\n")
         
@@ -200,6 +227,73 @@ def check_sessions():
             'success': True,
             'has_sessions': len(found) > 0,
             'sessions': found
+        })
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/scan-folder', methods=['POST'])
+def scan_folder():
+    """Scan folder to discover available atlases and metrics"""
+    try:
+        path = request.get_json().get('path', '')
+        path = os.path.expanduser(path)
+        
+        if not os.path.isdir(path):
+            return jsonify({'success': False, 'error': 'Invalid directory'})
+        
+        # Use analyzer to discover structure
+        from bct_analyzer import BCTAnalyzer
+        analyzer = BCTAnalyzer()
+        
+        structure = analyzer.discover_dsi_studio_structure(path)
+        
+        # Check if DSI Studio structure was found
+        if structure['subjects']:
+            return jsonify({
+                'success': True,
+                'structure_type': 'dsi_studio',
+                'subjects': structure['subjects'],
+                'sessions': list(structure['sessions']),
+                'atlases': list(structure['atlases']),
+                'metrics': list(structure['metrics']),
+                'total_files': structure['total_files']
+            })
+        
+        # Fall back to standard structure scan
+        sessions = []
+        file_formats = set()
+        matrix_count = 0
+        
+        # Check for session folders
+        for item in os.listdir(path):
+            item_path = os.path.join(path, item)
+            if os.path.isdir(item_path) and 'ses' in item.lower():
+                sessions.append(item)
+                for f in os.listdir(item_path):
+                    ext = os.path.splitext(f)[1].lower()
+                    if ext in ['.npy', '.csv', '.mat', '.xlsx', '.tsv']:
+                        file_formats.add(ext)
+                        matrix_count += 1
+        
+        # Check root directory for files
+        if not sessions:
+            for f in os.listdir(path):
+                if os.path.isfile(os.path.join(path, f)):
+                    ext = os.path.splitext(f)[1].lower()
+                    if ext in ['.npy', '.csv', '.mat', '.xlsx', '.tsv']:
+                        file_formats.add(ext)
+                        matrix_count += 1
+        
+        return jsonify({
+            'success': True,
+            'structure_type': 'standard',
+            'sessions': sorted(sessions),
+            'atlases': [],  # Not detectable in standard structure
+            'metrics': [],  # Not detectable in standard structure
+            'file_formats': list(file_formats),
+            'total_files': matrix_count
         })
     
     except Exception as e:
