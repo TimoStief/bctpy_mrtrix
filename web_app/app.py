@@ -67,6 +67,7 @@ def analyze():
         output_dir = data.get('output_dir', '')
         analysis_type = data.get('analysis_type', 'full')
         selected_metrics = data.get('selected_metrics', [])
+        output_format = data.get('output_format', 'parquet')
         
         if not input_dir or not os.path.isdir(input_dir):
             return jsonify({'success': False, 'error': 'Invalid input directory'}), 400
@@ -78,9 +79,10 @@ def analyze():
         
         # Create analyzer with output capture
         output_capture.clear()
-        current_analyzer = BCTAnalyzer(output_callback=output_capture.write, selected_metrics=selected_metrics)
+        current_analyzer = BCTAnalyzer(output_callback=output_capture.write, selected_metrics=selected_metrics, output_format=output_format)
         
         output_capture.write(f"🚀 Starting analysis (type: {analysis_type})\n")
+        output_capture.write(f"💾 Output format: {output_format}\n")
         if selected_metrics:
             output_capture.write(f"📊 Selected metrics: {', '.join(selected_metrics)}\n")
         

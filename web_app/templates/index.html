@@ -55,6 +55,21 @@
                         </select>
                     </div>
 
+                    <!-- Output Format -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold"><i class="fas fa-file-export me-2"></i>Output Format</label>
+                        <select class="form-select" id="outputFormat">
+                            <option value="parquet" selected>Parquet (Recommended for R)</option>
+                            <option value="feather">Feather (Fast interop)</option>
+                            <option value="hdf5">HDF5 (Scientific data)</option>
+                            <option value="csv">CSV (Universal)</option>
+                            <option value="excel">Excel (.xlsx)</option>
+                        </select>
+                        <small class="text-muted d-block mt-2">
+                            Choose output format for analysis results. Parquet/Feather recommended for R analysis.
+                        </small>
+                    </div>
+
                     <!-- Metric Selection -->
                     <div class="mb-4">
                         <label class="form-label fw-bold">
@@ -336,6 +351,7 @@ async function startAnalysis() {
     const inputDir = document.getElementById('inputDir').value.trim();
     const outputDir = document.getElementById('outputDir').value.trim();
     const analysisType = document.getElementById('analysisType').value;
+    const outputFormat = document.getElementById('outputFormat').value;
     
     // Collect selected metrics
     const selectedMetrics = Array.from(document.querySelectorAll('.metric-checkbox:checked'))
@@ -363,7 +379,8 @@ async function startAnalysis() {
                 input_dir: inputDir,
                 output_dir: outputDir,
                 analysis_type: analysisType,
-                selected_metrics: selectedMetrics
+                selected_metrics: selectedMetrics,
+                output_format: outputFormat
             })
         });
         

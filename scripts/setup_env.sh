@@ -39,7 +39,8 @@ fi
 # Install dependencies
 echo ""
 echo "Installing dependencies..."
-uv pip install numpy pandas bctpy scipy statsmodels openpyxl
+uv pip install --upgrade pip
+uv pip install numpy pandas bctpy scipy statsmodels openpyxl flask waitress pyarrow h5py
 
 echo ""
 echo "=========================================="

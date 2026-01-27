@@ -16,7 +16,7 @@ import json
 class BCTAnalyzer:
     """Unified BCT analysis engine"""
     
-    def __init__(self, output_callback=None, selected_metrics=None):
+    def __init__(self, output_callback=None, selected_metrics=None, output_format='parquet'):
         """
         Initialize BCT Analyzer
         
@@ -24,9 +24,17 @@ class BCTAnalyzer:
             output_callback: Optional callback function for logging output
             selected_metrics: List of metric groups to calculate (e.g., ['degree', 'clustering', 'efficiency'])
                             If None or empty, calculate all metrics
+            output_format: Output format for results ('parquet', 'feather', 'hdf5', 'csv', 'excel')
         """
         self.output_callback = output_callback or self._default_log
         self.sessions = ["ses-1", "ses-2", "ses-3", "ses-4"]
+        self.output_format = output_format.lower()
+        
+        # Validate output format
+        valid_formats = ['parquet', 'feather', 'hdf5', 'csv', 'excel']
+        if self.output_format not in valid_formats:
+            self.log(f"⚠️ Invalid output format '{output_format}', defaulting to 'parquet'")
+            self.output_format = 'parquet'
         
         # Map metric names to calculation flags
         self.metric_groups = {
@@ -55,6 +63,64 @@ class BCTAnalyzer:
     def log(self, message: str):
         """Log message via callback"""
         self.output_callback(message)
+    
+    def _save_results(self, df_results: pd.DataFrame, output_dir: str):
+        """
+        Save results in specified format
+        
+        Args:
+            df_results: DataFrame with analysis results
+            output_dir: Directory to save files
+        """
+        try:
+            if self.output_format == 'parquet':
+                output_file = os.path.join(output_dir, "bct_analysis_results.parquet")
+                df_results.to_parquet(output_file, index=False)
+                self.log(f"✓ Results saved to: {output_file}")
+                
+            elif self.output_format == 'feather':
+                output_file = os.path.join(output_dir, "bct_analysis_results.feather")
+                df_results.to_feather(output_file)
+                self.log(f"✓ Results saved to: {output_file}")
+                
+            elif self.output_format == 'hdf5':
+                import h5py
+                output_file = os.path.join(output_dir, "bct_analysis_results.h5")
+                with h5py.File(output_file, 'w') as f:
+                    # Save numeric columns
+                    numeric_cols = df_results.select_dtypes(include=[np.number]).columns
+                    for col in numeric_cols:
+                        f.create_dataset(col, data=df_results[col].values)
+                    # Save metadata
+                    f.attrs['columns'] = json.dumps([str(c) for c in df_results.columns])
+                    f.attrs['shape'] = df_results.shape
+                self.log(f"✓ Results saved to: {output_file}")
+                
+            elif self.output_format == 'csv':
+                output_file = os.path.join(output_dir, "bct_analysis_results.csv")
+                df_results.to_csv(output_file, index=False)
+                self.log(f"✓ Results saved to: {output_file}")
+                
+            elif self.output_format == 'excel':
+                output_file = os.path.join(output_dir, "bct_analysis_results.xlsx")
+                df_results.to_excel(output_file, index=False)
+                self.log(f"✓ Results saved to: {output_file}")
+                
+        except ImportError as e:
+            self.log(f"⚠️ Format '{self.output_format}' requires additional package: {e}")
+            self.log(f"Falling back to CSV format")
+            output_file = os.path.join(output_dir, "bct_analysis_results.csv")
+            df_results.to_csv(output_file, index=False)
+            self.log(f"✓ Results saved to: {output_file}")
+        except Exception as e:
+            self.log(f"❌ Error saving results: {e}")
+            self.log(f"Attempting fallback to CSV")
+            try:
+                output_file = os.path.join(output_dir, "bct_analysis_results.csv")
+                df_results.to_csv(output_file, index=False)
+                self.log(f"✓ Results saved to: {output_file}")
+            except Exception as e2:
+                self.log(f"❌ Failed to save results: {e2}")
     
     def quality_check(self, A: np.ndarray, filename: str = "") -> Dict:
         """
@@ -508,10 +574,8 @@ class BCTAnalyzer:
             df_results = pd.DataFrame(all_data)
             self.log(f"\n✓ Processed {len(all_data)} matrices")
             
-            # Save results
-            output_xlsx = os.path.join(output_dir, "bct_analysis_results.xlsx")
-            df_results.to_excel(output_xlsx, index=False)
-            self.log(f"✓ Results saved to: {output_xlsx}")
+            # Save results in selected format
+            self._save_results(df_results, output_dir)
             
             # Save QC report
             qc_report_path = os.path.join(output_dir, "quality_control_report.txt")

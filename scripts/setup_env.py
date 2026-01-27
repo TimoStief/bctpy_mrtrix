@@ -62,13 +62,23 @@ def create_venv(project_root):
 
 def install_dependencies(project_root):
     """Install project dependencies"""
+    # Ensure pip is up to date inside the UV-managed environment
+    run_command(
+        f"cd \"{project_root}\" && uv pip install --upgrade pip",
+        "Upgrading pip in virtual environment"
+    )
+
     dependencies = [
         "numpy",
         "pandas",
         "bctpy",
         "scipy",
         "statsmodels",
-        "openpyxl"
+        "openpyxl",
+        "flask",
+        "waitress",
+        "pyarrow",
+        "h5py"
     ]
     
     cmd = f"cd \"{project_root}\" && uv pip install {' '.join(dependencies)}"
