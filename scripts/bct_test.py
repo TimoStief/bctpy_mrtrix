@@ -5,6 +5,7 @@ import subprocess
 import sys
 import os
 import glob
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import bct
@@ -25,30 +26,30 @@ for pkg in required_packages:
 # -------------------------------
 # Pfad zu Testmatrizen
 # -------------------------------
-# Get the directory where this script is located
-script_dir = os.path.dirname(os.path.abspath(__file__))
-root = os.path.join(script_dir, "Test_matrizen")
+# Get project root (one level up from scripts/)
+project_root = Path(__file__).resolve().parent.parent
+root = project_root / "Test_matrizen"
 sessions = ["ses-1", "ses-2", "ses-3", "ses-4"]
 
-results_dir = os.path.join(script_dir, "results")
-os.makedirs(results_dir, exist_ok=True)
+results_dir = project_root / "results"
+results_dir.mkdir(parents=True, exist_ok=True)
 
 # -------------------------------
 # XLSX → NPY Konvertierung (falls nötig)
 # -------------------------------
 for ses in sessions:
-    ses_folder = os.path.join(root, ses)
-    if not os.path.isdir(ses_folder):
+    ses_folder = root / ses
+    if not ses_folder.is_dir():
         continue
 
-    xlsx_files = glob.glob(os.path.join(ses_folder, "*.xlsx"))
-    npy_files = glob.glob(os.path.join(ses_folder, "*.npy"))
+    xlsx_files = list(ses_folder.glob("*.xlsx"))
+    npy_files = list(ses_folder.glob("*.npy"))
 
     if xlsx_files and not npy_files:
         print(f"Konvertiere XLSX → NPY in {ses_folder}")
 
         for file in xlsx_files:
-            name = os.path.splitext(os.path.basename(file))[0]
+            name = file.stem
 
             df_mat = pd.read_excel(file, header=None)
             df_mat = df_mat.dropna(axis=0, how="all").dropna(axis=1, how="all")
@@ -57,7 +58,7 @@ for ses in sessions:
             if A.shape[0] != A.shape[1]:
                 raise ValueError(f"Matrix nicht quadratisch: {file}")
 
-            npy_path = os.path.join(ses_folder, f"{name}.npy")
+            npy_path = ses_folder / f"{name}.npy"
             np.save(npy_path, A)
             print(f"Gespeichert: {npy_path}")
 
@@ -67,14 +68,14 @@ for ses in sessions:
 all_data = []
 
 for ses in sessions:
-    ses_folder = os.path.join(root, ses)
-    files = glob.glob(os.path.join(ses_folder, "*.npy"))
+    ses_folder = root / ses
+    files = list(ses_folder.glob("*.npy"))
     if len(files) == 0:
         print(f"Warnung: Keine Dateien gefunden in {ses_folder}")
         continue
 
     for f in files:
-        subject = os.path.splitext(os.path.basename(f))[0].split("_")[0]
+        subject = f.stem.split("_")[0]
         A = np.load(f)
         A_bin = (A > 0).astype(int)
 
@@ -108,7 +109,7 @@ df = pd.DataFrame(all_data)
 if df.empty:
     raise RuntimeError("Keine Daten gefunden! Prüfe den Pfad zu Testmatrizen und Session-Ordnern.")
 
-xlsx_file = os.path.join(results_dir, "graph_metrics_all_sessions.xlsx")
+xlsx_file = results_dir / "graph_metrics_all_sessions.xlsx"
 df.to_excel(xlsx_file, index=False)
 print(f"Datei gespeichert: {xlsx_file}")
 print("Spalten in df:", df.columns.tolist())
