@@ -4,6 +4,47 @@ import numpy as np
 import pandas as pd
 import bct
 
+# ============================================================
+# XLSX → NPY KONVERTIERUNG FALLS NÖTIG
+# ============================================================
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+xlsx_input = os.path.join(script_dir, "input_matrices.xlsx")
+npy_root = os.path.join(script_dir, "Test_matrizen", "brainnectome_count_matrizen")
+os.makedirs(npy_root, exist_ok=True)
+
+# Excel laden
+df_xlsx = pd.read_excel(xlsx_input)
+
+# Erwartete Spalten
+required_cols = ["subject", "session"]
+if not all(c in df_xlsx.columns for c in required_cols):
+    raise ValueError("XLSX muss Spalten 'subject' und 'session' enthalten")
+
+# Matrix-Spalten (alles außer subject/session)
+matrix_cols = [c for c in df_xlsx.columns if c not in required_cols]
+
+for idx, row in df_xlsx.iterrows():
+    subject = row["subject"]
+    session = row["session"]
+
+    session_dir = os.path.join(npy_root, session)
+    os.makedirs(session_dir, exist_ok=True)
+
+    values = row[matrix_cols].values.astype(float)
+
+    # Quadratwurzel für NxN Matrix
+    n = int(np.sqrt(len(values)))
+    if n * n != len(values):
+        raise ValueError(f"Matrixgröße passt nicht für {subject} {session}")
+
+    A = values.reshape(n, n)
+
+    out_file = os.path.join(session_dir, f"{subject}_connectivity.npy")
+    np.save(out_file, A)
+
+    print(f" Matrix gespeichert: {out_file}")
 # -------------------------------
 # Pfade & Sessions
 # -------------------------------
