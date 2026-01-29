@@ -1,5 +1,6 @@
 import os
 import glob
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import bct
@@ -7,12 +8,12 @@ import bct
 # -------------------------------
 # Pfade & Sessions
 # -------------------------------
-# Get the directory where this script is located
-script_dir = os.path.dirname(os.path.abspath(__file__))
-root = os.path.join(script_dir, "Test_matrizen")
+# Get project root (one level up from scripts/)
+project_root = Path(__file__).resolve().parent.parent
+root = project_root / "Test_matrizen"
 sessions = ["ses-1", "ses-2", "ses-3", "ses-4"]
-results_dir = os.path.join(script_dir, "results")
-os.makedirs(results_dir, exist_ok=True)
+results_dir = project_root / "results"
+results_dir.mkdir(parents=True, exist_ok=True)
 
 # -------------------------------
 # Hilfsfunktion: Matrix-Typ bestimmen
@@ -140,16 +141,16 @@ def calculate_all_bct_metrics(A, matrix_type):
 all_data = []
 
 for ses in sessions:
-    ses_folder = os.path.join(root, ses)
-    if not os.path.isdir(ses_folder):
+    ses_folder = root / ses
+    if not ses_folder.is_dir():
         continue
-    files = glob.glob(os.path.join(ses_folder, "*.npy"))
+    files = list(ses_folder.glob("*.npy"))
     if not files:
         print(f"Keine NPY-Dateien gefunden in {ses_folder}")
         continue
 
     for f in files:
-        subject = os.path.splitext(os.path.basename(f))[0].split("_")[0]
+        subject = f.stem.split("_")[0]
         A = np.load(f)
         matrix_type = detect_matrix_type(A)
         metrics = calculate_all_bct_metrics(A, matrix_type)
@@ -169,6 +170,6 @@ for ses in sessions:
 # Ergebnisse speichern
 # -------------------------------
 df = pd.DataFrame(all_data)
-output_file = os.path.join(results_dir, "bct_all_metrics.xlsx")
+output_file = results_dir / "bct_all_metrics.xlsx"
 df.to_excel(output_file, index=False)
 print(f"Alle BCT-Metriken gespeichert in {output_file}")
