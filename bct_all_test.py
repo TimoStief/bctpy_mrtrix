@@ -9,7 +9,7 @@ import bct
 # -------------------------------
 # Get the directory where this script is located
 script_dir = os.path.dirname(os.path.abspath(__file__))
-root = os.path.join(script_dir, "Test_matrizen")
+root = os.path.join(script_dir, "Test_matrizen/brainnectome_count_matrizen")
 sessions = ["ses-1", "ses-2", "ses-3", "ses-4"]
 results_dir = os.path.join(script_dir, "results")
 os.makedirs(results_dir, exist_ok=True)
@@ -169,6 +169,6 @@ for ses in sessions:
 # Ergebnisse speichern
 # -------------------------------
 df = pd.DataFrame(all_data)
-output_file = os.path.join(results_dir, "bct_all_metrics.xlsx")
+output_file = os.path.join(results_dir, "bct_all_metrics_brainnectome.xlsx")
 df.to_excel(output_file, index=False)
 print(f"Alle BCT-Metriken gespeichert in {output_file}")
