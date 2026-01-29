@@ -4,51 +4,60 @@ import numpy as np
 import pandas as pd
 import bct
 
-# ============================================================
-# XLSX → NPY KONVERTIERUNG FALLS NÖTIG
-# ============================================================
+# =========================
+# XLSX → NPY Konvertierung
+# =========================
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-
-xlsx_input = os.path.join(script_dir, "input_matrices.xlsx")
-npy_root = os.path.join(script_dir, "Test_matrizen", "brainnectome_count_matrizen")
+input_dir = r"C:\Users\timo-\Desktop\Forschung\bctpy_mrtrix\Test_matrizen\brainnectome_count_matrizen"
+npy_root  = os.path.join(input_dir, "npy_matrizen")  # Zielordner für NPY
 os.makedirs(npy_root, exist_ok=True)
 
-# Excel laden
-df_xlsx = pd.read_excel(xlsx_input)
+# rekursiv nach npy und xlsx suchen
+xlsx_files = glob.glob(os.path.join(input_dir, "**", "*.xlsx"), recursive=True)
+npy_files  = glob.glob(os.path.join(npy_root, "**", "*.npy"), recursive=True)
 
-# Erwartete Spalten
-required_cols = ["subject", "session"]
-if not all(c in df_xlsx.columns for c in required_cols):
-    raise ValueError("XLSX muss Spalten 'subject' und 'session' enthalten")
+print("Gefundene XLSX:", xlsx_files)
+print("Gefundene NPY:", npy_files)
 
-# Matrix-Spalten (alles außer subject/session)
-matrix_cols = [c for c in df_xlsx.columns if c not in required_cols]
+if not xlsx_files and not npy_files:
+    raise FileNotFoundError(
+        f"Keine .xlsx oder .npy Dateien im Ordner {input_dir} oder dessen Unterordnern gefunden"
+    )
 
-for idx, row in df_xlsx.iterrows():
-    subject = row["subject"]
-    session = row["session"]
+# Bereits vorhandene NPys nur melden
+for npy in npy_files:
+    print(f"↪ NPY vorhanden, übersprungen: {os.path.basename(npy)}")
 
-    session_dir = os.path.join(npy_root, session)
+# XLSX konvertieren
+for infile in xlsx_files:
+    print(f"▶ Konvertiere XLSX: {os.path.basename(infile)}")
+
+    try:
+        df = pd.read_excel(infile, header=None)  # keine Spaltennamen erwartet
+    except Exception as e:
+        raise RuntimeError(f"Fehler beim Lesen von {infile}: {e}")
+
+    # Ganze Datei als Matrix
+    matrix = df.values.astype(float)
+    n, m = matrix.shape
+    if n != m:
+        raise ValueError(f"Matrix ist nicht quadratisch ({n}x{m}): {infile}")
+
+    # Zielordner basierend auf Session-Ordnernamen
+    session_name = os.path.basename(os.path.dirname(infile))
+    session_dir = os.path.join(npy_root, session_name)
     os.makedirs(session_dir, exist_ok=True)
 
-    values = row[matrix_cols].values.astype(float)
+    # Dateiname für NPY
+    subject_name = os.path.splitext(os.path.basename(infile))[0]
+    out_file = os.path.join(session_dir, f"{subject_name}.npy")
+    np.save(out_file, matrix)
 
-    # Quadratwurzel für NxN Matrix
-    n = int(np.sqrt(len(values)))
-    if n * n != len(values):
-        raise ValueError(f"Matrixgröße passt nicht für {subject} {session}")
+    print(f"  ✔ gespeichert: {out_file}")
 
-    A = values.reshape(n, n)
-
-    out_file = os.path.join(session_dir, f"{subject}_connectivity.npy")
-    np.save(out_file, A)
-
-    print(f" Matrix gespeichert: {out_file}")
 # -------------------------------
 # Pfade & Sessions
 # -------------------------------
-# Get the directory where this script is located
 script_dir = os.path.dirname(os.path.abspath(__file__))
 root = os.path.join(script_dir, "Test_matrizen/brainnectome_count_matrizen")
 sessions = ["ses-1", "ses-2", "ses-3", "ses-4"]
@@ -71,7 +80,6 @@ def detect_matrix_type(A):
             return "WD"  # weighted directed
         else:
             return "BD"  # binary directed
-
 # -------------------------------
 # Alle Metriken berechnen
 # -------------------------------
@@ -176,14 +184,16 @@ def calculate_all_bct_metrics(A, matrix_type):
     return metrics
 
 # -------------------------------
-# Schleife über alle Sessions / Dateien
+# Schleife über alle Sessions / Dateien (angepasst für npy_root)
 # -------------------------------
 all_data = []
 
 for ses in sessions:
-    ses_folder = os.path.join(root, ses)
+    ses_folder = os.path.join(npy_root, ses)  # <-- hier: npy_root statt root
     if not os.path.isdir(ses_folder):
+        print(f"Session-Ordner existiert nicht: {ses_folder}")
         continue
+
     files = glob.glob(os.path.join(ses_folder, "*.npy"))
     if not files:
         print(f"Keine NPY-Dateien gefunden in {ses_folder}")
