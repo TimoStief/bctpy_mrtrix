@@ -169,17 +169,18 @@ def calculate_all_bct_metrics(A, matrix_type):
         print(f"Paths/Distances konnte nicht berechnet werden: {e}")
 
     # -------------------
-    # CENTRALITY
+    # CENTRALITY (gekürzte, da sonst freeze oder langes rechnen)
     # -------------------
     try:
-        if matrix_type in ["BU", "BD"]:
+        if matrix_type in ["BU", "BD"] and A_bin.shape[0] <= 100:
             metrics["betweenness_bin"] = bct.betweenness_bin(A_bin)
-            metrics["subgraph_centrality"] = bct.subgraph_centrality(A_bin)
         else:
-            metrics["betweenness_wei"] = bct.betweenness_wei(A)
-            metrics["subgraph_centrality"] = bct.subgraph_centrality(A)
+            metrics["betweenness_bin"] = np.nan
+
+        metrics["subgraph_centrality"] = np.nan  # immer deaktiviert
+
     except Exception as e:
-        print(f"Centrality konnte nicht berechnet werden: {e}")
+        print(f"Centrality übersprungen: {e}")
 
     return metrics
 
