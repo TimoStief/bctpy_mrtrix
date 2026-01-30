@@ -5,10 +5,8 @@ import numpy as np
 import pandas as pd
 import bct
 
-# ------------------------
 # RuntimeWarnings abfangen
-# ------------------------
-# Teile davon (z.B. divide by zero) als Info ausgeben
+
 def warning_on_efficiency(message, category, filename, lineno, file=None, line=None):
     msg = str(message)
     if "divide by zero encountered in divide" in msg:
@@ -22,7 +20,6 @@ warnings.simplefilter("always", RuntimeWarning)
 
 # =========================
 # XLSX → NPY Konvertierung
-# =========================
 
 input_dir = r"C:\Users\timo-\Desktop\Forschung\bctpy_mrtrix\Test_matrizen\brodmann_count_matrizen"
 npy_root  = os.path.join(input_dir, "npy_matrizen")
@@ -48,9 +45,9 @@ if not xlsx_files and not existing_npy_names:
         f"Keine .xlsx oder .npy Dateien im Ordner {input_dir} gefunden"
     )
 
-# -------------------------
+# =========================
 # Konvertierung (mit Skip)
-# -------------------------
+
 for infile in xlsx_files:
     subject_name = os.path.splitext(os.path.basename(infile))[0]
 
@@ -78,18 +75,18 @@ for infile in xlsx_files:
 
     print(f"  ✔ gespeichert: {out_file}")
 
-# -------------------------------
+# =========================
 # Pfade & Sessions
-# -------------------------------
+
 script_dir = os.path.dirname(os.path.abspath(__file__))
 root = os.path.join(script_dir, "Test_matrizen/brainnectome_count_matrizen")
 sessions = ["ses-1", "ses-2", "ses-3", "ses-4"]
 results_dir = os.path.join(script_dir, "results")
 os.makedirs(results_dir, exist_ok=True)
 
-# -------------------------------
+# =========================
 # Hilfsfunktion: Matrix-Typ bestimmen
-# -------------------------------
+
 def detect_matrix_type(A):
     if A.shape[0] != A.shape[1]:
         return "unknown"
@@ -103,9 +100,10 @@ def detect_matrix_type(A):
             return "WD"  # weighted directed
         else:
             return "BD"  # binary directed
-# -------------------------------
+
+# =========================
 # Alle Metriken berechnen
-# -------------------------------
+
 def calculate_all_bct_metrics(A, matrix_type):
     metrics = {}
 
@@ -119,7 +117,7 @@ def calculate_all_bct_metrics(A, matrix_type):
 
     # -------------------
     # DEGREE & STRENGTH
-    # -------------------
+
     try:
         if matrix_type in ["BU", "WU"]:
             metrics["degree_vec"] = bct.degrees_und(A_bin)
@@ -140,7 +138,7 @@ def calculate_all_bct_metrics(A, matrix_type):
 
     # -------------------
     # DENSITY
-    # -------------------
+
     try:
         if matrix_type in ["BU", "WU"]:
             metrics["density"] = bct.density_und(A if matrix_type == "WU" else A_bin)
@@ -151,7 +149,7 @@ def calculate_all_bct_metrics(A, matrix_type):
 
     # -------------------
     # CLUSTERING & COMMUNITY
-    # -------------------
+
     try:
         if matrix_type == "BU":
             metrics["clustering"] = bct.clustering_coef_bu(A_bin)
@@ -211,7 +209,7 @@ def calculate_all_bct_metrics(A, matrix_type):
 
     # -------------------
     # PATHS & DISTANCES (mit Safe-Check für isolierte Knoten)
-    # -------------------
+
     try:
         if matrix_type in ["BU", "BD"]:
             # Prüfen, ob isolierte Knoten existieren
@@ -233,7 +231,7 @@ def calculate_all_bct_metrics(A, matrix_type):
         print(f"Paths/Distances konnte nicht berechnet werden: {e}")
     # -------------------
     # CENTRALITY (bewusst reduziert)
-    # -------------------
+
     try:
         if matrix_type in ["BU", "BD"] and A_bin.shape[0] <= 100:
             metrics["betweenness_bin"] = bct.betweenness_bin(A_bin)
@@ -248,9 +246,9 @@ def calculate_all_bct_metrics(A, matrix_type):
     return metrics
 
 
-# -------------------------------
+# =========================
 # Schleife über alle Sessions / Dateien (angepasst für npy_root)
-# -------------------------------
+
 all_data = []
 
 for ses in sessions:
@@ -281,9 +279,9 @@ for ses in sessions:
 
         all_data.append(flat_metrics)
 
-# -------------------------------
+# =========================
 # Ergebnisse speichern
-# -------------------------------
+
 df = pd.DataFrame(all_data)
 output_file = os.path.join(results_dir, "bct_all_metrics_brodmann.xlsx")
 df.to_excel(output_file, index=False)
