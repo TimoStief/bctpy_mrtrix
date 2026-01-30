@@ -190,12 +190,17 @@ def calculate_all_bct_metrics(A, matrix_type):
     # PATHS & DISTANCES
     # -------------------
     try:
-        if matrix_type in ["BU", "BD"]:
-            metrics["distance_bin"] = bct.distance_bin(A_bin)
-            metrics["charpath"] = bct.charpath(A_bin)
+        if has_isolated_nodes:
+            metrics["distance"] = None
+            metrics["charpath"] = np.nan
         else:
-            metrics["distance_wei"] = bct.distance_wei(A)
-            metrics["charpath"] = bct.charpath(A)
+            if matrix_type in ["BU", "BD"]:
+                metrics["distance"] = bct.distance_bin(A_bin)
+                metrics["charpath"] = bct.charpath(A_bin)
+            else:
+                metrics["distance"] = bct.distance_wei(A)
+                metrics["charpath"] = bct.charpath(A)
+
     except Exception as e:
         print(f"Paths/Distances konnte nicht berechnet werden: {e}")
 
