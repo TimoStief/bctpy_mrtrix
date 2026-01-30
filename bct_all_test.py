@@ -9,25 +9,36 @@ import bct
 # =========================
 
 input_dir = r"C:\Users\timo-\Desktop\Forschung\bctpy_mrtrix\Test_matrizen\brainnectome_count_matrizen"
-npy_root  = os.path.join(input_dir, "npy_matrizen")  # Zielordner für NPY
+npy_root  = os.path.join(input_dir, "npy_matrizen")
 os.makedirs(npy_root, exist_ok=True)
 
-# rekursiv nach npy und xlsx suchen
-xlsx_files = glob.glob(os.path.join(input_dir, "**", "*.xlsx"), recursive=True)
-npy_files  = glob.glob(os.path.join(npy_root, "**", "*.npy"), recursive=True)
+# Alle XLSX-Dateien (rekursiv, aber NICHT im npy_root)
+xlsx_files = [
+    f for f in glob.glob(os.path.join(input_dir, "**", "*.xlsx"), recursive=True)
+    if npy_root not in os.path.abspath(f)
+]
 
-print("Gefundene XLSX:", xlsx_files)
-print("Gefundene NPY:", npy_files)
+# Alle vorhandenen NPYs sammeln (nur Basename ohne Endung!)
+existing_npy_names = {
+    os.path.splitext(os.path.basename(f))[0]
+    for f in glob.glob(os.path.join(npy_root, "**", "*.npy"), recursive=True)
+}
 
-if not xlsx_files and not npy_files:
+print(f"Gefundene XLSX: {len(xlsx_files)}")
+print(f"Gefundene vorhandene NPYs: {len(existing_npy_names)}")
+
+if not xlsx_files and not existing_npy_names:
     raise FileNotFoundError(
-        f"Keine .xlsx oder .npy Dateien im Ordner {input_dir} oder dessen Unterordnern gefunden"
+        f"Keine .xlsx oder .npy Dateien im Ordner {input_dir} gefunden"
     )
 
+# -------------------------
+# Konvertierung (mit Skip)
+# -------------------------
 for infile in xlsx_files:
     subject_name = os.path.splitext(os.path.basename(infile))[0]
 
-    # 🔒 GLOBALER Skip-Check
+    # 🔒 Globaler Skip-Check (unabhängig vom Ordner!)
     if subject_name in existing_npy_names:
         print(f"↪ Bereits konvertiert, übersprungen: {subject_name}")
         continue
@@ -38,15 +49,17 @@ for infile in xlsx_files:
 
     out_file = os.path.join(session_dir, f"{subject_name}.npy")
 
-    print(f"▶ Konvertiere XLSX: {infile}")
+    print(f"▶ Konvertiere XLSX: {subject_name}")
 
     df = pd.read_excel(infile, header=None)
     matrix = df.values.astype(float)
 
     if matrix.shape[0] != matrix.shape[1]:
-        raise ValueError(f"Matrix nicht quadratisch: {infile}")
+        raise ValueError(f"Matrix nicht quadratisch ({matrix.shape}): {infile}")
 
     np.save(out_file, matrix)
+    existing_npy_names.add(subject_name)  # wichtig bei langen Läufen
+
     print(f"  ✔ gespeichert: {out_file}")
 
 # -------------------------------
