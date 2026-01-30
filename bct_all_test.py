@@ -187,23 +187,27 @@ def calculate_all_bct_metrics(A, matrix_type):
         print(f"Clustering/Community konnte nicht berechnet werden: {e}")
 
     # -------------------
-    # PATHS & DISTANCES
+    # PATHS & DISTANCES (mit Safe-Check für isolierte Knoten)
     # -------------------
     try:
-        if has_isolated_nodes:
-            metrics["distance"] = None
-            metrics["charpath"] = np.nan
-        else:
-            if matrix_type in ["BU", "BD"]:
-                metrics["distance"] = bct.distance_bin(A_bin)
-                metrics["charpath"] = bct.charpath(A_bin)
+        if matrix_type in ["BU", "BD"]:
+            # Prüfen, ob isolierte Knoten existieren
+            if np.any(np.sum(A_bin, axis=0) == 0):
+                metrics["distance_bin"] = np.nan
+                metrics["charpath"] = np.nan
             else:
-                metrics["distance"] = bct.distance_wei(A)
+                metrics["distance_bin"] = bct.distance_bin(A_bin)
+                metrics["charpath"] = bct.charpath(A_bin)
+        else:
+            # Für gewichtete Matrizen
+            if np.any(np.sum(A, axis=0) == 0):
+                metrics["distance_wei"] = np.nan
+                metrics["charpath"] = np.nan
+            else:
+                metrics["distance_wei"] = bct.distance_wei(A)
                 metrics["charpath"] = bct.charpath(A)
-
     except Exception as e:
         print(f"Paths/Distances konnte nicht berechnet werden: {e}")
-
     # -------------------
     # CENTRALITY (bewusst reduziert)
     # -------------------
