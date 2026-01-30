@@ -1,8 +1,24 @@
+import warnings
 import os
 import glob
 import numpy as np
 import pandas as pd
 import bct
+
+# ------------------------
+# RuntimeWarnings abfangen
+# ------------------------
+# Teile davon (z.B. divide by zero) als Info ausgeben
+def warning_on_efficiency(message, category, filename, lineno, file=None, line=None):
+    msg = str(message)
+    if "divide by zero encountered in divide" in msg:
+        print("⚠ Hinweis: Berechnung der Efficiency dauert länger wegen isolierter Knoten oder unverbundener Knoten.")
+    else:
+        # alle anderen Warnungen normal anzeigen
+        print(warnings.formatwarning(message, category, filename, lineno, line))
+
+warnings.showwarning = warning_on_efficiency
+warnings.simplefilter("always", RuntimeWarning)
 
 # =========================
 # XLSX → NPY Konvertierung
