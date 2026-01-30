@@ -141,7 +141,14 @@ def calculate_all_bct_metrics(A, matrix_type):
             metrics["clustering"] = bct.clustering_coef_bu(A_bin)
             metrics["transitivity"] = bct.transitivity_bu(A_bin)
 
-            # 🔒 Efficiency nur bei vollständig verbundenen Graphen
+            # Prüfen auf isolierte Knoten
+            isolated_nodes = np.where(A_bin.sum(axis=0) == 0)[0]
+            has_isolated_nodes = len(isolated_nodes) > 0
+            if has_isolated_nodes:
+                print(
+                    f"⚠ Warnung: {len(isolated_nodes)} isolierte Knoten vorhanden. Effizienzberechnung kann länger dauern oder RuntimeWarning erzeugen.")
+
+            # Efficiency nur bei vollständig verbundenen Graphen
             metrics["efficiency"] = (
                 np.nan if has_isolated_nodes else bct.efficiency_bin(A_bin)
             )
