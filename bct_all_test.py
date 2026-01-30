@@ -24,35 +24,29 @@ if not xlsx_files and not npy_files:
         f"Keine .xlsx oder .npy Dateien im Ordner {input_dir} oder dessen Unterordnern gefunden"
     )
 
-# Bereits vorhandene NPys nur melden
-for npy in npy_files:
-    print(f"↪ NPY vorhanden, übersprungen: {os.path.basename(npy)}")
-
-# XLSX konvertieren
 for infile in xlsx_files:
-    print(f"▶ Konvertiere XLSX: {os.path.basename(infile)}")
+    subject_name = os.path.splitext(os.path.basename(infile))[0]
 
-    try:
-        df = pd.read_excel(infile, header=None)  # keine Spaltennamen erwartet
-    except Exception as e:
-        raise RuntimeError(f"Fehler beim Lesen von {infile}: {e}")
+    # 🔒 GLOBALER Skip-Check
+    if subject_name in existing_npy_names:
+        print(f"↪ Bereits konvertiert, übersprungen: {subject_name}")
+        continue
 
-    # Ganze Datei als Matrix
-    matrix = df.values.astype(float)
-    n, m = matrix.shape
-    if n != m:
-        raise ValueError(f"Matrix ist nicht quadratisch ({n}x{m}): {infile}")
-
-    # Zielordner basierend auf Session-Ordnernamen
     session_name = os.path.basename(os.path.dirname(infile))
     session_dir = os.path.join(npy_root, session_name)
     os.makedirs(session_dir, exist_ok=True)
 
-    # Dateiname für NPY
-    subject_name = os.path.splitext(os.path.basename(infile))[0]
     out_file = os.path.join(session_dir, f"{subject_name}.npy")
-    np.save(out_file, matrix)
 
+    print(f"▶ Konvertiere XLSX: {infile}")
+
+    df = pd.read_excel(infile, header=None)
+    matrix = df.values.astype(float)
+
+    if matrix.shape[0] != matrix.shape[1]:
+        raise ValueError(f"Matrix nicht quadratisch: {infile}")
+
+    np.save(out_file, matrix)
     print(f"  ✔ gespeichert: {out_file}")
 
 # -------------------------------
