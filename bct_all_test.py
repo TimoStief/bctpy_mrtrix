@@ -8,7 +8,7 @@ import bct
 # XLSX → NPY Konvertierung
 # =========================
 
-input_dir = r"C:\Users\timo-\Desktop\Forschung\bctpy_mrtrix\Test_matrizen\brainnectome_count_matrizen"
+input_dir = r"C:\Users\timo-\Desktop\Forschung\bctpy_mrtrix\Test_matrizen\brodmann_count_matrizen"
 npy_root  = os.path.join(input_dir, "npy_matrizen")
 os.makedirs(npy_root, exist_ok=True)
 
@@ -269,6 +269,6 @@ for ses in sessions:
 # Ergebnisse speichern
 # -------------------------------
 df = pd.DataFrame(all_data)
-output_file = os.path.join(results_dir, "bct_all_metrics_brainnectome.xlsx")
+output_file = os.path.join(results_dir, "bct_all_metrics_brodmann.xlsx")
 df.to_excel(output_file, index=False)
 print(f"Alle BCT-Metriken gespeichert in {output_file}")
