@@ -93,9 +93,13 @@ def detect_matrix_type(A):
 def calculate_all_bct_metrics(A, matrix_type):
     metrics = {}
 
-    # Sicherstellen, dass A float ist (Vermeidung von NaN-Fehlern)
+    # Sicherstellen, dass A float ist
     A = np.array(A, dtype=float)
+    np.fill_diagonal(A, 0)  # 🔒 wichtig für Distance/Efficiency
     A_bin = (A > 0).astype(int)
+
+    # Prüfen auf isolierte Knoten
+    has_isolated_nodes = np.any(np.sum(A_bin, axis=0) == 0)
 
     # -------------------
     # DEGREE & STRENGTH
@@ -136,8 +140,14 @@ def calculate_all_bct_metrics(A, matrix_type):
         if matrix_type == "BU":
             metrics["clustering"] = bct.clustering_coef_bu(A_bin)
             metrics["transitivity"] = bct.transitivity_bu(A_bin)
-            metrics["efficiency"] = bct.efficiency_bin(A_bin)
+
+            # 🔒 Efficiency nur bei vollständig verbundenen Graphen
+            metrics["efficiency"] = (
+                np.nan if has_isolated_nodes else bct.efficiency_bin(A_bin)
+            )
+
             metrics["components"] = len(bct.get_components(A_bin))
+
             try:
                 Ci, Q = bct.community_louvain(A_bin)
                 metrics["modularity"] = Q
@@ -145,20 +155,34 @@ def calculate_all_bct_metrics(A, matrix_type):
             except:
                 metrics["modularity"] = np.nan
                 metrics["community_louvain"] = None
+
             metrics["rich_club"] = bct.rich_club_bu(A_bin)
             metrics["kcore"] = bct.kcore_bu(A_bin)
+
         elif matrix_type == "WU":
             metrics["clustering"] = bct.clustering_coef_wu(A)
             metrics["transitivity"] = bct.transitivity_wu(A)
-            metrics["efficiency"] = bct.efficiency_wei(A)
+
+            metrics["efficiency"] = (
+                np.nan if has_isolated_nodes else bct.efficiency_wei(A)
+            )
+
         elif matrix_type == "BD":
             metrics["clustering"] = bct.clustering_coef_bd(A_bin)
             metrics["transitivity"] = bct.transitivity_bd(A_bin)
-            metrics["efficiency"] = bct.efficiency_bin(A_bin)
+
+            metrics["efficiency"] = (
+                np.nan if has_isolated_nodes else bct.efficiency_bin(A_bin)
+            )
+
         elif matrix_type == "WD":
             metrics["clustering"] = bct.clustering_coef_wd(A)
             metrics["transitivity"] = bct.transitivity_wd(A)
-            metrics["efficiency"] = bct.efficiency_wei(A)
+
+            metrics["efficiency"] = (
+                np.nan if has_isolated_nodes else bct.efficiency_wei(A)
+            )
+
     except Exception as e:
         print(f"Clustering/Community konnte nicht berechnet werden: {e}")
 
@@ -176,7 +200,7 @@ def calculate_all_bct_metrics(A, matrix_type):
         print(f"Paths/Distances konnte nicht berechnet werden: {e}")
 
     # -------------------
-    # CENTRALITY (gekürzte, da sonst freeze oder langes rechnen)
+    # CENTRALITY (bewusst reduziert)
     # -------------------
     try:
         if matrix_type in ["BU", "BD"] and A_bin.shape[0] <= 100:
@@ -184,12 +208,13 @@ def calculate_all_bct_metrics(A, matrix_type):
         else:
             metrics["betweenness_bin"] = np.nan
 
-        metrics["subgraph_centrality"] = np.nan  # immer deaktiviert
+        metrics["subgraph_centrality"] = np.nan
 
     except Exception as e:
         print(f"Centrality übersprungen: {e}")
 
     return metrics
+
 
 # -------------------------------
 # Schleife über alle Sessions / Dateien (angepasst für npy_root)
